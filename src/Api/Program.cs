@@ -33,12 +33,22 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Db
+// Db
 builder.Services.AddDbContext<ApplicationDbContext>(opt =>
     opt.UseSqlServer(
         Environment.GetEnvironmentVariable("DB_CONNECTION_STRING")
-        ?? builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? builder.Configuration.GetConnectionString("DefaultConnection"),
+        sql =>
+        {
+            sql.EnableRetryOnFailure(
+                maxRetryCount: 5,               // réessaye 5 fois
+                maxRetryDelay: TimeSpan.FromSeconds(10),   // 10s max entre essais
+                errorNumbersToAdd: null         // laisser null par défaut
+            );
+        }
     )
 );
+
 
 
 
