@@ -21,8 +21,10 @@ public class JwtTokenService : ITokenService
     {
         var issuer = _cfg["Jwt:Issuer"];
         var audience = _cfg["Jwt:Audience"];
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                         _cfg["Jwt:SigningKey"] ?? "d0a7e3d3b2a94b0e922ce2c0d3e6e1a1b9c7f3a2e5d4c6b8f0a1b2c3d4e5f6a7"));
+        var signingKey = Environment.GetEnvironmentVariable("JWT_SIGNING_KEY")
+                           ??_cfg["Jwt:SigningKey"]
+                           ?? throw new Exception("JWT_SIGNING_KEY is missing");
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var expires = DateTime.UtcNow.AddMinutes(int.Parse(_cfg["Jwt:AccessTokenMinutes"] ?? "15"));
 
