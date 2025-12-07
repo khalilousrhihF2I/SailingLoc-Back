@@ -35,8 +35,11 @@ builder.Host.UseSerilog();
 // Db
 builder.Services.AddDbContext<ApplicationDbContext>(opt =>
     opt.UseSqlServer(
-    Environment.GetEnvironmentVariable("DB_CONNECTION_STRING")
-    ?? builder.Configuration.GetConnectionString("DefaultConnection"));
+        Environment.GetEnvironmentVariable("DB_CONNECTION_STRING")
+        ?? builder.Configuration.GetConnectionString("DefaultConnection")
+    )
+);
+
 
 
 // Identity
@@ -172,7 +175,7 @@ builder.Services.AddTransient<ErrorHandlingMiddleware>();
 
 // Messaging
 builder.Services.AddScoped<IEmailSender, SendGridEmailSender>();
-builder.Services.AddScoped<ISmsSender, TwilioSmsSender>(); // stub si pas encore branché
+builder.Services.AddScoped<ISmsSender, TwilioSmsSender>(); // stub si pas encore branchÃ©
 
 // Templates
 builder.Services.AddScoped<ITemplateRenderer, SimpleTemplateRenderer>();
