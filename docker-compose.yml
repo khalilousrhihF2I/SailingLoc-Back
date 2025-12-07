@@ -1,0 +1,22 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: startupapi_web
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ConnectionStrings__DefaultConnection: "Server=host.docker.internal,1433;Database=StartupApi;User Id=sa;Password=StartupDB2025!;TrustServerCertificate=True;MultipleActiveResultSets=True"
+      Jwt__Issuer: "StartupApi"
+      Jwt__Audience: "StartupApi.Clients"
+      Jwt__SigningKey: "replace-with-long-random-secret"
+      Jwt__AccessTokenMinutes: "15"
+      Jwt__RefreshTokenDays: "30"
+    ports:
+      - "5000:8080"
+    restart: unless-stopped
+    volumes:
+      - dpkeys:/root/.aspnet/DataProtection-Keys
+
+volumes:
+  dpkeys:

@@ -1,0 +1,95 @@
+Excellent réflexe 💪 — comprendre le **rôle de chaque table** est indispensable pour bien maîtriser la logique de ton API .NET 8.
+
+Ci-dessous tu as une **explication claire, structurée et exhaustive** de **toutes les tables** créées par ton script SQL (ASP.NET Core Identity + tables personnalisées), **le rôle fonctionnel**, et **les endpoints de ton API** qui les utilisent.
+
+---
+
+## 🧩 1. Tables **Identity** (gérées par ASP.NET Core Identity)
+
+Ces tables représentent toute la couche d’authentification et d’autorisations standards, sur lesquelles ton API repose.
+
+| Table                | Rôle                                                                                                                                                   | Endpoints concernés                                                                                                                                                                                                                                                                                                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **AspNetUsers**      | C’est la table principale des utilisateurs de ton système. Elle stocke les identités (email, hash du mot de passe, prénom, nom, statut, avatar, etc.). | - `POST /api/v1/auth/register` (création)  <br> - `POST /api/v1/auth/login` (vérifie Email + PasswordHash)  <br> - `GET /api/v1/auth/me` / `PUT /api/v1/auth/me` (lecture / mise à jour du profil) <br> - `POST /api/v1/auth/upload-avatar` (mise à jour AvatarUrl) <br> - `GET /api/v1/admin/users` (listing côté admin) <br> - `DELETE /api/v1/admin/users/{id}` (suppression) |
+| **AspNetRoles**      | Contient les rôles possibles (`Admin`, `User`, etc.).                                                                                                  | - `POST /api/v1/admin/users/{id}/roles` (assignation de rôles) <br> - Initialisation des rôles de base au démarrage (`Admin`, `User`)                                                                                                                                                                                                                                            |
+| **AspNetUserRoles**  | Table de jonction entre `AspNetUsers` et `AspNetRoles` : un utilisateur peut avoir plusieurs rôles.                                                    | - `POST /api/v1/admin/users/{id}/roles` <br> - Lecture automatique par `[Authorize(Roles="Admin")]`                                                                                                                                                                                                                                                                              |
+| **AspNetUserClaims** | Contient des “claims” (données additionnelles d’autorisation, par ex. `permission:view_orders`).                                                       | - Implicite via ASP.NET Identity <br> - Peut être exposé dans un futur endpoint `/admin/claims`                                                                                                                                                                                                                                                                                  |
+| **AspNetRoleClaims** | Donne des claims à des rôles plutôt qu’à des utilisateurs.                                                                                             | - Pas d’API directe actuellement, mais utilisé par le moteur d’autorisation interne                                                                                                                                                                                                                                                                                              |
+| **AspNetUserLogins** | Stocke les connexions via providers externes (`Google`, `LinkedIn`, etc.). Clé composite `(LoginProvider, ProviderKey)`                                | - `POST /api/v1/auth/external` (SSO / OAuth login)                                                                                                                                                                                                                                                                                                                               |
+| **AspNetUserTokens** | Tokens d’authentification temporaires (par ex. pour MFA, reset, etc.).                                                                                 | - Utilisé en interne par Identity si tu actives certaines options (2FA, remember-me)                                                                                                                                                                                                                                                                                             |
+
+---
+
+## 🔐 2. Tables **custom de sécurité**
+
+Tu y ajoutes la gestion des Refresh Tokens, Password Reset et External Logins enrichis.
+
+| Table                   | Rôle                                                                                                                                                                                                   | Endpoints concernés                                                                                                                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **RefreshTokens**       | Permet la rotation et la révocation des **refresh tokens** pour le JWT. Chaque connexion mobile ou web crée une ligne avec `Token`, `ExpiresAt`, `Revoked`, `UserId`.                                  | - `POST /api/v1/auth/login` → génère un refresh token <br> - `POST /api/v1/auth/refresh` → échange un refresh token valide contre un nouveau JWT <br> - `POST /api/v1/auth/logout` → révoque le refresh token |
+| **PasswordResetTokens** | Gère les **tokens de réinitialisation** de mot de passe envoyés par email. Chaque token est unique, avec date d’expiration et flag `Used`.                                                             | - `POST /api/v1/auth/request-password-reset` → génère un token <br> - `POST /api/v1/auth/reset-password` → valide le token et met à jour le hash du mot de passe                                              |
+| **ExternalLogins**      | Enregistre les **comptes externes (SSO)** liés à un utilisateur, au-delà de `AspNetUserLogins` (qui est plus basique). Tu peux y stocker des métadonnées supplémentaires (Provider, date de création). | - `POST /api/v1/auth/external` → création / lien du compte externe                                                                                                                                            |
+| **AuditLogs**           | Journalise toutes les actions sensibles (connexion, création, suppression, etc.). Permet traçabilité et conformité RGPD.                                                                               | - `GET /api/v1/admin/audit-logs` (consultation des logs côté Admin) <br> - Rempli automatiquement par un middleware `AuditMiddleware` ou service `IAuditService`                                              |
+| **Profiles**            | Table séparée pour stocker des informations de profil utilisateur étendues (bio, préférences, etc.).                                                                                                   | - (Préparé) `POST /api/v1/profiles`, `GET /api/v1/profiles/{id}` <br> - En attente d’implémentation future (déjà câblé dans DbContext)                                                                        |
+
+---
+
+## 🧱 3. Relations principales (vue d’ensemble)
+
+```
+AspNetUsers (1) ────< AspNetUserRoles >──── (1) AspNetRoles
+        │
+        ├──< RefreshTokens
+        ├──< PasswordResetTokens
+        ├──< ExternalLogins
+        ├──< AuditLogs
+        └──< Profiles
+```
+
+---
+
+## 📊 4. Tables purement techniques
+
+| Table                     | Description                                                                                                     |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **__EFMigrationsHistory** | (créée automatiquement par Entity Framework Core) garde la trace des migrations exécutées. Pas d’accès via API. |
+
+---
+
+## 🧠 5. Exemple de correspondance “table → endpoint”
+
+| Table                   | CRUD API associé                                                                                                              |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **AspNetUsers**         | `POST /api/v1/auth/register` (C), `GET /api/v1/auth/me` (R), `PUT /api/v1/auth/me` (U), `DELETE /api/v1/admin/users/{id}` (D) |
+| **AspNetRoles**         | `POST /api/v1/admin/users/{id}/roles` (C/U)                                                                                   |
+| **RefreshTokens**       | `POST /api/v1/auth/login` (C), `POST /api/v1/auth/refresh` (R), `POST /api/v1/auth/logout` (U)                                |
+| **PasswordResetTokens** | `POST /api/v1/auth/request-password-reset` (C), `POST /api/v1/auth/reset-password` (U)                                        |
+| **ExternalLogins**      | `POST /api/v1/auth/external` (C)                                                                                              |
+| **AuditLogs**           | `GET /api/v1/admin/audit-logs` (R)                                                                                            |
+| **Profiles**            | `GET/POST/PUT /api/v1/profiles` (C/R/U) — pré-préparé                                                                         |
+| **AspNetUserRoles**     | Assignation / lecture interne de rôles pour les policies `[Authorize(Roles="Admin")]`                                         |
+
+---
+
+## 🛡️ 6. Sécurité et utilisation concrète
+
+| Élément            | Protection                                                                                                                            | Conséquence                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `/api/v1/auth/*`   | Public pour `register`, `login`, `request-password-reset`, `reset-password`. Protégé (`[Authorize]`) pour `me`, `upload-avatar`, etc. | Gère les opérations sur `AspNetUsers`, `PasswordResetTokens`, `RefreshTokens`. |
+| `/api/v1/admin/*`  | `[Authorize(Roles="Admin")]`                                                                                                          | Accès aux `AspNetUsers`, `AuditLogs`, `AspNetRoles`.                           |
+| `/api/v1/profiles` | `[Authorize]`                                                                                                                         | Modifie / lit les `Profiles`.                                                  |
+
+---
+
+## 🔍 7. Bonnes pratiques et extensions futures
+
+* **AuditLogs** → Peut être relié à un dashboard d’administration (traçabilité).
+* **Profiles** → Étend les infos utilisateur sans alourdir `AspNetUsers`.
+* **ExternalLogins** → Peut être enrichi pour stocker le refresh token Google/LinkedIn.
+* **RefreshTokens** → Permet des connexions simultanées depuis plusieurs appareils (mobile + web).
+* **AspNetUserRoles** → Supporte les permissions fines via `Policy-based Authorization`.
+
+---
+
+Souhaites-tu que je t’ajoute un **diagramme visuel (ERD)** clair de ces tables et relations (format PNG ou PDF) pour le mettre dans `/docs/architecture/` de ton projet ?
+Je peux le générer à partir de ton schéma actuel avec les relations entre toutes les entités.
