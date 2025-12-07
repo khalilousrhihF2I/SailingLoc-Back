@@ -124,7 +124,7 @@ builder.Services.AddScoped<IHomeService, HomeService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Startup API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Sailing Loc By Khalil API", Version = "v1" });
 
     // JWT scheme
     var jwtScheme = new OpenApiSecurityScheme
