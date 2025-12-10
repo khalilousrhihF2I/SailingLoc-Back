@@ -21,6 +21,9 @@ using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseUrls("http://0.0.0.0:8080");
+Console.WriteLine("🚀 API booting...");
+
 builder.Configuration.AddEnvironmentVariables();
 
 // Serilog
@@ -32,7 +35,7 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 builder.Host.UseSerilog();
 
-// Db
+
 // Db
 builder.Services.AddDbContext<ApplicationDbContext>(opt =>
     opt.UseSqlServer(
@@ -211,8 +214,6 @@ builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
-// Apply migrations & seed
-await DbSeeder.SeedAsync(app.Services, builder.Configuration);
 
 app.UseSerilogRequestLogging();
 app.UseMiddleware<ErrorHandlingMiddleware>();
@@ -222,11 +223,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHealthChecks("/healthz");
+app.MapHealthChecks("/health");
 
 if (app.Environment.IsDevelopment())
 {
-   
+// Apply migrations & seed
+await DbSeeder.SeedAsync(app.Services, builder.Configuration);
 }
 
 app.UseSwagger();
