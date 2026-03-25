@@ -1,5 +1,5 @@
  
-# StartupApi — .NET 8 REST API
+# SailingLoc Api — .NET 8 REST API
 
 ## Overview
 
