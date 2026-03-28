@@ -50,8 +50,12 @@ public static class DbSeeder
                 UserType = "admin",
                 EmailConfirmed = true
             };
-            await um.CreateAsync(admin, adminPass);
-            await um.AddToRoleAsync(admin, "Admin");
+            var result1 = await um.CreateAsync(admin, adminPass);
+            if (result1.Succeeded)
+            {
+                var created = await um.FindByEmailAsync(admin.Email!);
+                await um.AddToRoleAsync(created!, "Admin");
+            }
         }
 
         // --- Admin ---
@@ -68,8 +72,12 @@ public static class DbSeeder
                 UserType = "admin",
                 EmailConfirmed = true
             };
-            await um.CreateAsync(admin, adminPass);
-            await um.AddToRoleAsync(admin, "Admin");
+            var result2 = await um.CreateAsync(admin, adminPass);
+            if (result2.Succeeded)
+            {
+                var created = await um.FindByEmailAsync(admin.Email!);
+                await um.AddToRoleAsync(created!, "Admin");
+            }
         }
 
         // --- Client ---
@@ -86,8 +94,12 @@ public static class DbSeeder
                 UserType = "renter",
                 EmailConfirmed = true
             };
-            await um.CreateAsync(client, renterPass);
-            await um.AddToRoleAsync(client, "Renter");
+            var result3 = await um.CreateAsync(client, renterPass);
+            if (result3.Succeeded)
+            {
+                var created = await um.FindByEmailAsync(client.Email!);
+                await um.AddToRoleAsync(created!, "Renter");
+            }
         }
 
         // --- Partner ---
@@ -104,8 +116,12 @@ public static class DbSeeder
                 UserType = "owner",
                 EmailConfirmed = true
             };
-            await um.CreateAsync(partner, ownerPass);
-            await um.AddToRoleAsync(partner, "Owner");
+            var result4 = await um.CreateAsync(partner, ownerPass);
+            if (result4.Succeeded)
+            {
+                var created = await um.FindByEmailAsync(partner.Email!);
+                await um.AddToRoleAsync(created!, "Owner");
+            }
         }
     }
 }
