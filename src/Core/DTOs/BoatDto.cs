@@ -54,6 +54,7 @@ namespace Core.DTOs
         public decimal Length { get; set; }
         public int Year { get; set; }
         public string? Image { get; set; }
+        public string? Slug { get; set; }
         public decimal Rating { get; set; }
         public int ReviewCount { get; set; }
         public string? Equipment { get; set; }

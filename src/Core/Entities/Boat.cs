@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Core.Entities
 {
     /// <summary>
-    /// Représente un bateau louable sur la plateforme.
+    /// Reprï¿½sente un bateau louable sur la plateforme.
     /// </summary>
     public class Boat
     {
@@ -21,6 +21,7 @@ namespace Core.Entities
         public decimal Length { get; set; }
         public int Year { get; set; }
         public string? Image { get; set; }
+        public string? Slug { get; set; }
         public decimal Rating { get; set; }
         public int ReviewCount { get; set; }
         public string? Equipment { get; set; }

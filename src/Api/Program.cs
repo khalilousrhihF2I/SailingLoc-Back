@@ -21,9 +21,6 @@ using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.WebHost.UseUrls("http://0.0.0.0:8080");
-Console.WriteLine("🚀 API booting...");
-
 builder.Configuration.AddEnvironmentVariables();
 
 // Serilog
@@ -35,24 +32,11 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 builder.Host.UseSerilog();
 
-
 // Db
 builder.Services.AddDbContext<ApplicationDbContext>(opt =>
     opt.UseSqlServer(
-        Environment.GetEnvironmentVariable("DB_CONNECTION_STRING")
-        ?? builder.Configuration.GetConnectionString("DefaultConnection"),
-        sql =>
-        {
-            sql.EnableRetryOnFailure(
-                maxRetryCount: 5,               // réessaye 5 fois
-                maxRetryDelay: TimeSpan.FromSeconds(10),   // 10s max entre essais
-                errorNumbersToAdd: null         // laisser null par défaut
-            );
-        }
-    )
-);
-
-
+    Environment.GetEnvironmentVariable("DB_CONNECTION_STRING")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection")));
 
 
 // Identity
@@ -65,11 +49,11 @@ builder.Services.AddIdentity<AppUser, AppRole>(opt =>
 
 // JWT
 var signingKey = Environment.GetEnvironmentVariable("JWT_SIGNING_KEY")
-    ?? builder.Configuration["Jwt:SigningKey"]
+    ?? builder.Configuration["Jwt:SigningKey"] 
     ?? throw new Exception("JWT_SIGNING_KEY is missing");
 
-var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey));
-
+var keyBytes = Encoding.UTF8.GetBytes(signingKey);
+var key = new SymmetricSecurityKey(keyBytes);
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -137,7 +121,7 @@ builder.Services.AddScoped<IHomeService, HomeService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Sailing Loc By Khalil API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Startup API", Version = "v1" });
 
     // JWT scheme
     var jwtScheme = new OpenApiSecurityScheme
@@ -172,11 +156,7 @@ builder.Services.AddHealthChecks().AddDbContextCheck<ApplicationDbContext>();
 
 // SendGrid client
 builder.Services.AddSingleton<ISendGridClient>(_ =>
-    new SendGridClient(
-        Environment.GetEnvironmentVariable("SENDGRID_KEY")
-        ?? builder.Configuration["SendGrid:dataFlow"]    // fallback local dev
-    ));
-
+    new SendGridClient(builder.Configuration["SendGrid:dataFlow"]));
 
 
 // Services
@@ -188,7 +168,7 @@ builder.Services.AddTransient<ErrorHandlingMiddleware>();
 
 // Messaging
 builder.Services.AddScoped<IEmailSender, SendGridEmailSender>();
-builder.Services.AddScoped<ISmsSender, TwilioSmsSender>(); // stub si pas encore branché
+builder.Services.AddScoped<ISmsSender, TwilioSmsSender>(); // stub si pas encore branch�
 
 // Templates
 builder.Services.AddScoped<ITemplateRenderer, SimpleTemplateRenderer>();
@@ -214,6 +194,8 @@ builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
+// Apply migrations & seed
+await DbSeeder.SeedAsync(app.Services, builder.Configuration);
 
 app.UseSerilogRequestLogging();
 app.UseMiddleware<ErrorHandlingMiddleware>();
@@ -223,12 +205,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/healthz");
 
 if (app.Environment.IsDevelopment())
 {
-// Apply migrations & seed
-await DbSeeder.SeedAsync(app.Services, builder.Configuration);
+   
 }
 
 app.UseSwagger();

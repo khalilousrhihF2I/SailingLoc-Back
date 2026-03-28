@@ -35,6 +35,15 @@ namespace Api.Controllers
             return Ok(boat);
         }
 
+        [HttpGet("slug/{slug}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetBySlug(string slug, CancellationToken ct)
+        {
+            var boat = await _service.GetBySlugAsync(slug);
+            if (boat == null) return NotFound();
+            return Ok(boat);
+        }
+
         [HttpPost]
         [Authorize(Roles = "Admin,Owner")]
         public async Task<IActionResult> Create([FromBody] CreateBoatDto dto, CancellationToken ct)

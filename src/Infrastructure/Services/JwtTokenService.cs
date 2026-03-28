@@ -25,6 +25,7 @@ public class JwtTokenService : ITokenService
                            ??_cfg["Jwt:SigningKey"]
                            ?? throw new Exception("JWT_SIGNING_KEY is missing");
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey));
+
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var expires = DateTime.UtcNow.AddMinutes(int.Parse(_cfg["Jwt:AccessTokenMinutes"] ?? "15"));
 

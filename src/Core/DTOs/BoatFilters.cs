@@ -13,5 +13,7 @@ namespace Core.DTOs
         public int? CapacityMin { get; set; }
         public string? StartDate { get; set; } // ISO string attendu depuis le front
         public string? EndDate { get; set; }
+        public int Page { get; set; } = 1;
+        public int PageSize { get; set; } = 20;
     }
 }

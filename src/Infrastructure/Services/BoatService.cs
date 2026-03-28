@@ -3,6 +3,9 @@ using Core.Entities;
 using Core.Interfaces;
 using Infrastructure.Data.Repositories;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Infrastructure.Services
 {
@@ -32,6 +35,7 @@ namespace Infrastructure.Services
                 Length = b.Length,
                 Year = b.Year,
                 Image = b.Image,
+                Slug = b.Slug,
                 Rating = b.Rating,
                 ReviewCount = b.ReviewCount,
                 Equipment = b.Equipment,
@@ -75,7 +79,7 @@ namespace Infrastructure.Services
             };
         }
 
-        public async Task<IEnumerable<BoatDto>> GetBoatsAsync(BoatFilters filters)
+        public async Task<PaginatedResult<BoatDto>> GetBoatsAsync(BoatFilters filters)
         {
             var q = _repo.Query().AsNoTracking()
                 .Where(b => b.IsActive && b.IsVerified && !b.IsDeleted);
@@ -121,11 +125,28 @@ namespace Infrastructure.Services
                 }
             }
 
+            var totalCount = await q.CountAsync();
+
+            var page = filters?.Page ?? 1;
+            var pageSize = filters?.PageSize ?? 20;
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 1;
+            if (pageSize > 100) pageSize = 100;
+
             var list = await q
+                .OrderByDescending(b => b.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .AsNoTracking()
                 .ToListAsync();
 
-            return list.Select(MapToDto);
+            return new PaginatedResult<BoatDto>
+            {
+                Items = list.Select(MapToDto),
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
         }
 
         public async Task<BoatDto?> GetByIdAsync(int id)
@@ -135,6 +156,36 @@ namespace Infrastructure.Services
             // Only return boats that are active, verified and not deleted
             if (b.IsDeleted) return null;
             return MapToDto(b);
+        }
+
+        public async Task<BoatDto?> GetBySlugAsync(string slug)
+        {
+            if (string.IsNullOrWhiteSpace(slug)) return null;
+            var b = await _repo.Query()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(b => b.Slug == slug && !b.IsDeleted);
+            if (b == null) return null;
+            return MapToDto(b);
+        }
+
+        private static string GenerateSlug(string name, int id)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return $"boat-{id}";
+
+            // Normalize and remove diacritics
+            var normalized = name.Normalize(NormalizationForm.FormD);
+            var sb = new StringBuilder();
+            foreach (var c in normalized)
+            {
+                var uc = CharUnicodeInfo.GetUnicodeCategory(c);
+                if (uc != UnicodeCategory.NonSpacingMark)
+                    sb.Append(c);
+            }
+            var text = sb.ToString().Normalize(NormalizationForm.FormC).ToLowerInvariant();
+            // Replace non-alphanumeric with hyphens
+            text = Regex.Replace(text, @"[^a-z0-9\s-]", "");
+            text = Regex.Replace(text, @"[\s-]+", "-").Trim('-');
+            return $"{text}-{id}";
         }
 
         public async Task<BoatDto> CreateAsync(CreateBoatDto dto)
@@ -177,6 +228,13 @@ namespace Infrastructure.Services
 
             await _repo.AddAsync(boat);
             await _repo.SaveChangesAsync();
+
+            // Generate slug after insert to use the actual Id
+            if (string.IsNullOrEmpty(boat.Slug))
+            {
+                boat.Slug = GenerateSlug(boat.Name, boat.Id);
+                await _repo.SaveChangesAsync();
+            }
 
             // reload with navigations
             var created = await _repo.GetByIdAsync(boat.Id);

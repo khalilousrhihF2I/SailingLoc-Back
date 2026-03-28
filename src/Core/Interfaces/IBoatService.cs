@@ -5,8 +5,9 @@ namespace Core.Interfaces
 {
     public interface IBoatService
     {
-        Task<IEnumerable<BoatDto>> GetBoatsAsync(BoatFilters filters);
+        Task<PaginatedResult<BoatDto>> GetBoatsAsync(BoatFilters filters);
         Task<BoatDto?> GetByIdAsync(int id);
+        Task<BoatDto?> GetBySlugAsync(string slug);
         Task<BoatDto> CreateAsync(CreateBoatDto dto);
         Task<BoatDto> UpdateAsync(int id, UpdateBoatDto dto);
         Task<bool> DeleteAsync(int id);
