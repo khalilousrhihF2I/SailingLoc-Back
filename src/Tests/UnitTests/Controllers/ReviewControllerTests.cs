@@ -4,6 +4,7 @@ using Core.Interfaces;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using Tests.Helpers;
 using Xunit;
 
 namespace Tests.UnitTests.Controllers;
@@ -19,7 +20,8 @@ public class ReviewControllerTests
     public ReviewControllerTests()
     {
         _serviceMock = new Mock<IReviewService>();
-        _sut = new ReviewController(_serviceMock.Object);
+        var db = TestDbContextFactory.Create();
+        _sut = new ReviewController(_serviceMock.Object, db);
     }
 
     [Fact]

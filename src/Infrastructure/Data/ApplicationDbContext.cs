@@ -31,6 +31,8 @@ namespace Infrastructure.Data
         public DbSet<Message> Messages => Set<Message>();
         public DbSet<Review> Reviews => Set<Review>();
         public DbSet<UserDocument> UserDocuments => Set<UserDocument>();
+        public DbSet<BoatPricePeriod> BoatPricePeriods => Set<BoatPricePeriod>();
+        public DbSet<Dispute> Disputes => Set<Dispute>();
 
         protected override void OnModelCreating(ModelBuilder b)
         {
@@ -227,6 +229,21 @@ namespace Infrastructure.Data
             });
 
             // -------------------------
+            // BoatPricePeriod (tarification saisonnière)
+            // -------------------------
+            b.Entity<BoatPricePeriod>(e =>
+            {
+                e.HasKey(x => x.Id);
+                e.Property(x => x.Label).IsRequired().HasMaxLength(100);
+                e.Property(x => x.PricePerDay).HasColumnType("decimal(18,2)");
+
+                e.HasOne(x => x.Boat)
+                    .WithMany(bt => bt.PricePeriods)
+                    .HasForeignKey(x => x.BoatId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // -------------------------
             // BoatAvailability
             // -------------------------
             b.Entity<BoatAvailability>(e =>
@@ -341,20 +358,35 @@ namespace Infrastructure.Data
                     .IsRequired()
                     .HasMaxLength(256);
 
-                // -----------------------------
-                // Relation : User → UserDocuments
-                // -----------------------------
                 e.HasOne(x => x.User)
                     .WithMany(u => u.UserDocuments)
                     .HasForeignKey(x => x.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                // -----------------------------
-                // Relation : Admin → DocumentsVerified
-                // -----------------------------
                 e.HasOne(x => x.VerifiedByUser)
                     .WithMany(u => u.DocumentsVerified)
                     .HasForeignKey(x => x.VerifiedBy)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+
+            // -------------------------
+            // Dispute (gestion des litiges)
+            // -------------------------
+            b.Entity<Dispute>(e =>
+            {
+                e.HasKey(x => x.Id);
+                e.Property(x => x.Subject).IsRequired().HasMaxLength(300);
+                e.Property(x => x.Description).IsRequired().HasMaxLength(4000);
+                e.Property(x => x.Status).IsRequired().HasMaxLength(50);
+
+                e.HasOne(x => x.Booking)
+                    .WithMany()
+                    .HasForeignKey(x => x.BookingId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                e.HasOne(x => x.Reporter)
+                    .WithMany()
+                    .HasForeignKey(x => x.ReporterId)
                     .OnDelete(DeleteBehavior.NoAction);
             });
 

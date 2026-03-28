@@ -29,4 +29,15 @@ public class LocalFileStorageService : IFileStorageService
 
         return "/uploads/avatars/" + Path.GetFileName(path);
     }
+
+    public Task<string> UploadDocumentAsync(Stream fileStream, string container, string blobName, string contentType, CancellationToken ct)
+    {
+        // Local fallback — not used in production (Azure Blob is the real implementation)
+        return SaveAvatarAsync(fileStream, blobName, contentType, ct);
+    }
+
+    public Task<bool> DeleteAsync(string container, string blobName, CancellationToken ct)
+    {
+        return Task.FromResult(false);
+    }
 }

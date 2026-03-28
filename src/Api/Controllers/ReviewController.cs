@@ -2,8 +2,11 @@ using System;
 using System.Threading.Tasks;
 using Core.DTOs;
 using Core.Interfaces;
+using Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace Api.Controllers
 {
@@ -12,10 +15,12 @@ namespace Api.Controllers
     public class ReviewController : ControllerBase
     {
         private readonly IReviewService _service;
+        private readonly ApplicationDbContext _db;
 
-        public ReviewController(IReviewService service)
+        public ReviewController(IReviewService service, ApplicationDbContext db)
         {
             _service = service;
+            _db = db;
         }
 
         [HttpGet]
@@ -84,5 +89,59 @@ namespace Api.Controllers
             if (!ok) return NotFound();
             return NoContent();
         }
+
+        // ── Moderation endpoints ──
+
+        /// <summary>Admin: list reviews pending moderation</summary>
+        [HttpGet("moderation/pending")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetPendingReviews(CancellationToken ct)
+        {
+            var reviews = await _db.Reviews
+                .Where(r => r.ModerationStatus == "pending")
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync(ct);
+            return Ok(reviews);
+        }
+
+        /// <summary>Admin: approve a review</summary>
+        [HttpPatch("{id:int}/approve")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Approve(int id, CancellationToken ct)
+        {
+            var review = await _db.Reviews.FindAsync(new object[] { id }, ct);
+            if (review == null) return NotFound();
+
+            var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            review.ModerationStatus = "approved";
+            review.ModeratedBy = adminId != null ? Guid.Parse(adminId) : null;
+            review.ModeratedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync(ct);
+            return Ok(review);
+        }
+
+        /// <summary>Admin: reject a review with optional note</summary>
+        [HttpPatch("{id:int}/reject")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Reject(int id, [FromBody] RejectReviewDto dto, CancellationToken ct)
+        {
+            var review = await _db.Reviews.FindAsync(new object[] { id }, ct);
+            if (review == null) return NotFound();
+
+            var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            review.ModerationStatus = "rejected";
+            review.ModerationNote = dto?.Reason;
+            review.ModeratedBy = adminId != null ? Guid.Parse(adminId) : null;
+            review.ModeratedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync(ct);
+            return Ok(review);
+        }
+    }
+
+    public class RejectReviewDto
+    {
+        public string? Reason { get; set; }
     }
 }

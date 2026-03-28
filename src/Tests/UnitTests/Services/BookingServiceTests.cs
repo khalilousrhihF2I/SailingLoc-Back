@@ -50,14 +50,14 @@ public class BookingServiceTests : IAsyncLifetime
     [Fact]
     public async Task GetBookingsAsync_NoFilters_ReturnsAll()
     {
-        var result = (await _sut.GetBookingsAsync(new BookingFilters())).ToList();
+        var result = (await _sut.GetBookingsAsync(new BookingFilters())).Items.ToList();
         result.Should().HaveCount(2);
     }
 
     [Fact]
     public async Task GetBookingsAsync_FilterByRenter_ReturnsOnly()
     {
-        var result = (await _sut.GetBookingsAsync(new BookingFilters { RenterId = _seed.Renter.Id })).ToList();
+        var result = (await _sut.GetBookingsAsync(new BookingFilters { RenterId = _seed.Renter.Id })).Items.ToList();
         result.Should().HaveCount(2);
         result.Should().OnlyContain(b => b.RenterId == _seed.Renter.Id);
     }
@@ -65,7 +65,7 @@ public class BookingServiceTests : IAsyncLifetime
     [Fact]
     public async Task GetBookingsAsync_FilterByStatus_ReturnsMatching()
     {
-        var result = (await _sut.GetBookingsAsync(new BookingFilters { Status = "pending" })).ToList();
+        var result = (await _sut.GetBookingsAsync(new BookingFilters { Status = "pending" })).Items.ToList();
         result.Should().HaveCount(1);
         result[0].Status.Should().Be("pending");
     }
@@ -73,7 +73,7 @@ public class BookingServiceTests : IAsyncLifetime
     [Fact]
     public async Task GetBookingsAsync_FilterByOwner_ReturnsMatching()
     {
-        var result = (await _sut.GetBookingsAsync(new BookingFilters { OwnerId = _seed.Owner.Id })).ToList();
+        var result = (await _sut.GetBookingsAsync(new BookingFilters { OwnerId = _seed.Owner.Id })).Items.ToList();
         result.Should().HaveCount(2);
     }
 

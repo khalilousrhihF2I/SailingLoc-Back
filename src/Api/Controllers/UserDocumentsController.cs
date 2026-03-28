@@ -38,16 +38,40 @@ namespace Api.Controllers
             if (userIdClaim == null) return Unauthorized();
             var userId = Guid.Parse(userIdClaim);
 
+            // Determine target container and blob name based on document type
+            var docType = (form.DocumentType ?? "").ToLowerInvariant();
+            string container;
+            string blobName;
+            var extension = Path.GetExtension(form.File.FileName).ToLowerInvariant();
+
+            if (docType.Contains("contrat") || docType.Contains("contract"))
+            {
+                container = "contrats";
+                // Use booking-related GUID if available, otherwise generate one
+                blobName = $"{Guid.NewGuid()}{extension}";
+            }
+            else if (docType.Contains("profil") || docType.Contains("avatar") || docType.Contains("photo"))
+            {
+                container = "profile";
+                blobName = $"{userId}{extension}";
+            }
+            else
+            {
+                container = "documents";
+                blobName = $"{userId}_{Guid.NewGuid()}{extension}";
+            }
+
+            // Upload to Azure Blob Storage
+            string documentUrl;
             await using var stream = form.File.OpenReadStream();
-            // reuse SaveAvatarAsync for simple storage path
-            //var url = await _files.SaveAvatarAsync(stream, form.File.FileName, form.File.ContentType, ct);
+            documentUrl = await _files.UploadDocumentAsync(stream, container, blobName, form.File.ContentType, ct);
 
             var doc = new UserDocument
             {
                 UserId = userId,
                 BoatId = form.BoatId,
                 DocumentType = form.DocumentType ?? string.Empty,
-                DocumentUrl = "NonImplemente/Aucun-service-de-stockage-V2-commingsooon.pdf",
+                DocumentUrl = documentUrl,
                 FileName = form.File.FileName,
                 FileSize = form.File.Length,
                 IsVerified = false,

@@ -17,6 +17,10 @@ namespace Core.Entities
         public decimal ServiceFee { get; set; }
         public decimal TotalPrice { get; set; }
 
+        // Skipper option
+        public bool WithSkipper { get; set; }
+        public decimal SkipperFee { get; set; }
+
         public string Status { get; set; } = "";
         public string RenterName { get; set; } = "";
         public string RenterEmail { get; set; } = "";

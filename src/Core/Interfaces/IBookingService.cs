@@ -8,7 +8,7 @@ namespace Core.Interfaces
 {
     public interface IBookingService
     {
-        Task<IEnumerable<BookingDto>> GetBookingsAsync(BookingFilters filters);
+        Task<PaginatedResult<BookingDto>> GetBookingsAsync(BookingFilters filters);
         Task<BookingDto?> GetBookingByIdAsync(string id);
         Task<BookingDto> CreateBookingAsync(CreateBookingDto dto);
         Task<BookingDto> UpdateBookingAsync(string id, UpdateBookingDto dto);

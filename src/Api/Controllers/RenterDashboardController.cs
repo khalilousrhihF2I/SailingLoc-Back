@@ -37,12 +37,14 @@ namespace Api.Controllers
         }
 
         [HttpGet("bookings")]
-        public async Task<IActionResult> GetBookings()
+        public async Task<IActionResult> GetBookings([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
             var userId = GetCurrentUserId();
             if (userId == null) return Unauthorized();
-            var list = await _service.GetBookingsAsync(userId.Value);
-            return Ok(list);
+            var allList = await _service.GetBookingsAsync(userId.Value);
+            var totalCount = allList.Count;
+            var items = allList.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            return Ok(new { Items = items, TotalCount = totalCount, Page = page, PageSize = pageSize, TotalPages = pageSize > 0 ? (int)Math.Ceiling((double)totalCount / pageSize) : 0 });
         }
 
         [HttpGet("profile")]

@@ -40,10 +40,12 @@ namespace Api.Controllers.Admin
         }
 
         [HttpGet("bookings")]
-        public async Task<IActionResult> GetBookings()
+        public async Task<IActionResult> GetBookings([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
-            var bookings = await _service.GetBookingsAsync();
-            return Ok(bookings);
+            var allBookings = await _service.GetBookingsAsync();
+            var totalCount = allBookings.Count;
+            var items = allBookings.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            return Ok(new { Items = items, TotalCount = totalCount, Page = page, PageSize = pageSize, TotalPages = pageSize > 0 ? (int)Math.Ceiling((double)totalCount / pageSize) : 0 });
         }
 
         [HttpGet("activity")]

@@ -89,6 +89,17 @@ builder.Services.AddCors(opt =>
         .AllowAnyMethod()
         .AllowCredentials());
 });
+
+// CSRF / Anti-forgery protection
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-XSRF-TOKEN";
+    options.Cookie.Name = "XSRF-TOKEN";
+    options.Cookie.HttpOnly = false; // accessible by JS to read and send back in header
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+});
+
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 // Repository + Service
@@ -163,12 +174,26 @@ builder.Services.AddSingleton<ISendGridClient>(_ =>
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
-builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+
+// Azure Blob Storage — GED / document storage
+var blobConnectionString = Environment.GetEnvironmentVariable("AZURE_BLOB_CONNECTION_STRING")
+    ?? builder.Configuration["AzureBlobStorage:ConnectionString"]
+    ?? "";
+if (!string.IsNullOrWhiteSpace(blobConnectionString))
+{
+    builder.Services.AddSingleton(new Azure.Storage.Blobs.BlobServiceClient(blobConnectionString));
+    builder.Services.AddScoped<IFileStorageService, Infrastructure.Services.AzureBlobStorageService>();
+}
+else
+{
+    builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+}
+
 builder.Services.AddTransient<ErrorHandlingMiddleware>();
 
 // Messaging
 builder.Services.AddScoped<IEmailSender, SendGridEmailSender>();
-builder.Services.AddScoped<ISmsSender, TwilioSmsSender>(); // stub si pas encore branch�
+builder.Services.AddScoped<ISmsSender, TwilioSmsSender>(); // stub si pas encore branch�
 
 // Templates
 builder.Services.AddScoped<ITemplateRenderer, SimpleTemplateRenderer>();
@@ -203,6 +228,13 @@ app.UseStaticFiles();
 app.UseCors("Default");
 app.UseAuthentication();
 app.UseAuthorization();
+
+// CSRF token endpoint — frontend calls this to get a token
+app.MapGet("/api/v1/csrf-token", (Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery, HttpContext context) =>
+{
+    var tokens = antiforgery.GetAndStoreTokens(context);
+    return Results.Ok(new { token = tokens.RequestToken });
+}).AllowAnonymous();
 
 app.MapControllers();
 app.MapHealthChecks("/healthz");

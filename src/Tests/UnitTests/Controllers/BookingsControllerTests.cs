@@ -32,7 +32,7 @@ public class BookingsControllerTests
     public async Task GetAll_ReturnsOk()
     {
         _serviceMock.Setup(s => s.GetBookingsAsync(It.IsAny<BookingFilters>()))
-            .ReturnsAsync(new List<BookingDto>());
+            .ReturnsAsync(new PaginatedResult<BookingDto> { Items = new List<BookingDto>(), TotalCount = 0, Page = 1, PageSize = 20 });
 
         var result = await _sut.GetAll(new BookingFilters(), CancellationToken.None);
 

@@ -58,7 +58,7 @@ namespace Infrastructure.Services
             };
         }
 
-        public async Task<IEnumerable<BookingDto>> GetBookingsAsync(BookingFilters filters)
+        public async Task<PaginatedResult<BookingDto>> GetBookingsAsync(BookingFilters filters)
         {
             var q = _db.Bookings
                 .Include(b => b.Boat).ThenInclude(x => x.Images)
@@ -72,8 +72,23 @@ namespace Infrastructure.Services
             if (filters?.StartDate != null) q = q.Where(b => b.EndDate >= filters.StartDate.Value);
             if (filters?.EndDate != null) q = q.Where(b => b.StartDate <= filters.EndDate.Value);
 
-            var list = await q.ToListAsync();
-            return list.Select(MapToDto);
+            var totalCount = await q.CountAsync();
+            var page = filters?.Page ?? 1;
+            var pageSize = filters?.PageSize ?? 20;
+
+            var list = await q
+                .OrderByDescending(b => b.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return new PaginatedResult<BookingDto>
+            {
+                Items = list.Select(MapToDto),
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
         }
 
         public async Task<BookingDto?> GetBookingByIdAsync(string id)
@@ -94,20 +109,20 @@ namespace Infrastructure.Services
                 .Where(a => a.BoatId == dto.BoatId && !a.IsAvailable && a.StartDate < dto.EndDate && a.EndDate > dto.StartDate)
                 .AsNoTracking()
                 .AnyAsync();
-            if (overlappingAvailability) throw new InvalidOperationException("Le bateau n'est pas disponible pour la période sélectionnée");
+            if (overlappingAvailability) throw new InvalidOperationException("Le bateau n'est pas disponible pour la pï¿½riode sï¿½lectionnï¿½e");
 
             var overlappingBookings = await _db.Bookings
                 .Where(b => b.BoatId == dto.BoatId && b.Status != "cancelled" && b.StartDate < dto.EndDate && b.EndDate > dto.StartDate)
                 .AsNoTracking()
                 .AnyAsync();
-            if (overlappingBookings) throw new InvalidOperationException("Le bateau est déjà réservé pour la période sélectionnée");
+            if (overlappingBookings) throw new InvalidOperationException("Le bateau est dï¿½jï¿½ rï¿½servï¿½ pour la pï¿½riode sï¿½lectionnï¿½e");
 
             // prevent renter from having overlapping bookings on other boats
             var overlappingRenterBookings = await _db.Bookings
                 .Where(b => b.RenterId == dto.RenterId && b.Status != "cancelled" && b.StartDate < dto.EndDate && b.EndDate > dto.StartDate)
                 .AsNoTracking()
                 .AnyAsync();
-            if (overlappingRenterBookings) throw new InvalidOperationException("Vous avez déjà une réservation qui chevauche la période sélectionnée");
+            if (overlappingRenterBookings) throw new InvalidOperationException("Vous avez dï¿½jï¿½ une rï¿½servation qui chevauche la pï¿½riode sï¿½lectionnï¿½e");
 
             // create booking
             var booking = new Booking
@@ -142,7 +157,7 @@ namespace Infrastructure.Services
                 EndDate = booking.EndDate,
                 IsAvailable = false,
                 ReferenceType = "booking",
-                Reason = "Réservation Client",
+                Reason = "Rï¿½servation Client",
                 ReferenceId = booking.Id,
                 CreatedAt = DateTime.UtcNow
             };
@@ -181,7 +196,7 @@ namespace Infrastructure.Services
             catch (Exception ex)
             {
                 // don't fail the booking if email fails; log to console for now
-                Console.WriteLine($"Erreur lors de l'envoi des notifications de réservation: {ex.Message}");
+                Console.WriteLine($"Erreur lors de l'envoi des notifications de rï¿½servation: {ex.Message}");
             }
 
             return MapToDto(created!);
@@ -193,7 +208,7 @@ namespace Infrastructure.Services
                 .Include(b => b.Boat).ThenInclude(x => x.Owner)
                 .Include(b => b.Renter)
                 .FirstOrDefaultAsync(b => b.Id == id);
-            if (existing == null) throw new KeyNotFoundException("Réservation introuvable");
+            if (existing == null) throw new KeyNotFoundException("Rï¿½servation introuvable");
             // only status allowed
             existing.Status = dto.Status;
             existing.UpdatedAt = DateTime.UtcNow;
