@@ -94,6 +94,8 @@
     <Build Include="dbo\Tables\BoatAvailability.sql" />
     <Build Include="dbo\Tables\Messages.sql" />
     <Build Include="dbo\Tables\UserDocuments.sql" />
+    <Build Include="dbo\Tables\BoatPricePeriods.sql" />
+    <Build Include="dbo\Tables\Disputes.sql" />
     <Build Include="dbo\Stored Procedures\sp_UpdateBoatRating.sql" />
     <Build Include="dbo\Stored Procedures\sp_UpdateDestinationBoatCount.sql" />
     <Build Include="dbo\Stored Procedures\sp_CheckBoatAvailability.sql" />

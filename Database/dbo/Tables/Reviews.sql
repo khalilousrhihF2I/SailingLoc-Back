@@ -18,7 +18,13 @@ CREATE TABLE [dbo].[Reviews] (
     -- Dates
     [CreatedAt] DATETIME2(7) NOT NULL DEFAULT GETUTCDATE(),
     [UpdatedAt] DATETIME2(7) NULL,
-    
+
+    -- Modération
+    [ModerationStatus] NVARCHAR(50) NOT NULL DEFAULT 'pending',
+    [ModerationNote] NVARCHAR(MAX) NULL,
+    [ModeratedBy] UNIQUEIDENTIFIER NULL,
+    [ModeratedAt] DATETIME2(7) NULL,
+
     CONSTRAINT [FK_Reviews_Boats_BoatId] 
         FOREIGN KEY ([BoatId]) REFERENCES [dbo].[Boats] ([Id]) ON DELETE CASCADE,
     CONSTRAINT [FK_Reviews_Bookings_BookingId] 

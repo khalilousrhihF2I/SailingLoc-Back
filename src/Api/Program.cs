@@ -238,11 +238,7 @@ app.MapGet("/api/v1/csrf-token", (Microsoft.AspNetCore.Antiforgery.IAntiforgery 
 
 app.MapControllers();
 app.MapHealthChecks("/healthz");
-
-if (app.Environment.IsDevelopment())
-{
-   
-}
+ 
 
 app.UseSwagger();
 app.UseSwaggerUI();

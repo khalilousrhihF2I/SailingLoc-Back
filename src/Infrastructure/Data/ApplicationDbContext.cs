@@ -141,6 +141,10 @@ namespace Infrastructure.Data
             {
                 e.HasKey(x => x.Id);
 
+                e.HasOne(x => x.User)
+                    .WithOne(u => u.Profile)
+                    .HasForeignKey<Profile>(x => x.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // -------------------------
@@ -272,10 +276,18 @@ namespace Infrastructure.Data
             {
                 e.HasKey(x => x.Id);
 
+                // Map StartDate/EndDate to SQL DATE (not DATETIME2)
+                e.Property(x => x.StartDate).HasColumnType("date");
+                e.Property(x => x.EndDate).HasColumnType("date");
+
+                // Map computed column Days (read-only, persisted in SQL)
+                e.Property(x => x.Days)
+                    .HasComputedColumnSql("DATEDIFF(DAY, [StartDate], [EndDate])", stored: true);
+
                 e.HasOne(x => x.Boat)
                     .WithMany(b => b.Bookings)
                     .HasForeignKey(x => x.BoatId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                    .OnDelete(DeleteBehavior.NoAction);
 
                 e.HasOne(x => x.Renter)
                    .WithMany(u => u.Bookings)

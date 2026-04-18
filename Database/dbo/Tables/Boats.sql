@@ -16,6 +16,7 @@
     [ReviewCount] INT NOT NULL DEFAULT 0,
     [Equipment] NVARCHAR(MAX) NULL, -- JSON array: ["GPS", "Pilote automatique", ...]
     [Description] NVARCHAR(MAX) NULL,
+    [Slug] NVARCHAR(300) NULL,
     
     -- Propriétaire
     [OwnerId]  UNIQUEIDENTIFIER   NOT NULL,
@@ -24,7 +25,11 @@
     [IsActive] BIT NOT NULL DEFAULT 1,
     [IsVerified] BIT NOT NULL DEFAULT 0,
     [IsDeleted] BIT NOT NULL DEFAULT 0,
-    
+
+    -- Skipper
+    [HasSkipper] BIT NOT NULL DEFAULT 0,
+    [SkipperPrice] DECIMAL(10,2) NOT NULL DEFAULT 0,
+
     -- Dates
     [CreatedAt] DATETIME2(7) NOT NULL DEFAULT GETUTCDATE(),
     [UpdatedAt] DATETIME2(7) NULL,
