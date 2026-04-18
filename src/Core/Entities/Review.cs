@@ -15,6 +15,12 @@ namespace Core.Entities
         public int Rating { get; set; }
         public string? Comment { get; set; }
 
+        // Moderation workflow
+        public string ModerationStatus { get; set; } = "pending"; // pending, approved, rejected
+        public string? ModerationNote { get; set; }
+        public Guid? ModeratedBy { get; set; }
+        public DateTime? ModeratedAt { get; set; }
+
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 

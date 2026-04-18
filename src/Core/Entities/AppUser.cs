@@ -83,5 +83,8 @@ namespace Core.Entities
 
         /// <summary>Documents que cet utilisateur (admin) a vérifiés.</summary>
         public ICollection<UserDocument> DocumentsVerified { get; set; } = [];
+
+        /// <summary>Profil utilisateur (relation 1:1).</summary>
+        public Profile? Profile { get; set; }
     }
 }

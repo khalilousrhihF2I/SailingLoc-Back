@@ -17,7 +17,11 @@ CREATE TABLE [dbo].[Bookings] (
     [Subtotal] DECIMAL(10,2) NOT NULL,
     [ServiceFee] DECIMAL(10,2) NOT NULL,
     [TotalPrice] DECIMAL(10,2) NOT NULL,
-    
+
+    -- Skipper
+    [WithSkipper] BIT NOT NULL DEFAULT 0,
+    [SkipperFee] DECIMAL(10,2) NOT NULL DEFAULT 0,
+
     -- Statut
     [Status] NVARCHAR(50) NOT NULL DEFAULT 'pending' 
         CHECK ([Status] IN ('pending', 'confirmed', 'completed', 'cancelled')),

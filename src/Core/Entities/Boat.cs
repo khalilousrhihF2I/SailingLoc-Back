@@ -27,6 +27,10 @@ namespace Core.Entities
         public string? Equipment { get; set; }
         public string? Description { get; set; }
 
+        // Skipper option
+        public bool HasSkipper { get; set; }
+        public decimal SkipperPrice { get; set; }
+
         public Guid OwnerId { get; set; }
         public bool IsActive { get; set; }
         public bool IsVerified { get; set; }
@@ -40,6 +44,7 @@ namespace Core.Entities
         public Destination? Destination { get; set; }
         public ICollection<BoatImage> Images { get; set; } = new List<BoatImage>();
         public ICollection<BoatAvailability> Availabilities { get; set; } = new List<BoatAvailability>();
+        public ICollection<BoatPricePeriod> PricePeriods { get; set; } = new List<BoatPricePeriod>();
         public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
         public ICollection<Review> Reviews { get; set; } = new List<Review>();
         public ICollection<Message> Messages { get; set; } = new List<Message>(); 
