@@ -90,45 +90,91 @@ namespace Infrastructure.Services
                 RenterName = b.Renter != null ? b.Renter.FirstName + " " + b.Renter.LastName : string.Empty,
                 TotalPrice = b.TotalPrice,
                 Status = b.Status,
+                StartDate = b.StartDate,
+                EndDate = b.EndDate,
                 CreatedAt = b.CreatedAt
             }).ToList();
         }
 
         public async Task<List<AdminActivityDto>> GetActivityAsync()
         {
+            // Pull real activity from AuditLogs + recent entities
             var activities = new List<AdminActivityDto>();
 
-            var lastBooking = await _db.Bookings.OrderByDescending(b => b.CreatedAt).FirstOrDefaultAsync();
-            if (lastBooking != null)
+            // Recent audit log entries (last 20)
+            var recentLogs = await _db.AuditLogs
+                .OrderByDescending(a => a.Timestamp)
+                .Take(20)
+                .ToListAsync();
+
+            foreach (var log in recentLogs)
             {
                 activities.Add(new AdminActivityDto
                 {
-                    Type = "booking",
-                    Description = $"Booking {lastBooking.Id} by {lastBooking.RenterName}",
-                    OccurredAt = lastBooking.CreatedAt
+                    Type = log.Action?.ToLower().Contains("login") == true ? "login"
+                         : log.Action?.ToLower().Contains("register") == true ? "user"
+                         : log.Action?.ToLower().Contains("booking") == true ? "booking"
+                         : log.Action?.ToLower().Contains("boat") == true ? "boat"
+                         : log.Action?.ToLower().Contains("review") == true ? "review"
+                         : log.Action?.ToLower().Contains("dispute") == true ? "dispute"
+                         : "system",
+                    Description = log.Details ?? log.Action,
+                    OccurredAt = log.Timestamp,
+                    Action = log.Action,
+                    UserId = log.UserId?.ToString(),
+                    Ip = log.Ip
                 });
             }
 
-            var lastBoat = await _db.Boats.OrderByDescending(b => b.CreatedAt).FirstOrDefaultAsync();
-            if (lastBoat != null)
+            // If no audit logs yet, fall back to recent entity creation
+            if (activities.Count == 0)
             {
-                activities.Add(new AdminActivityDto
+                var recentBookings = await _db.Bookings
+                    .OrderByDescending(b => b.CreatedAt)
+                    .Take(5)
+                    .ToListAsync();
+                foreach (var bk in recentBookings)
                 {
-                    Type = "boat",
-                    Description = $"Boat {lastBoat.Name} created",
-                    OccurredAt = lastBoat.CreatedAt
-                });
-            }
+                    activities.Add(new AdminActivityDto
+                    {
+                        Type = "booking",
+                        Description = $"Réservation #{bk.Id} par {bk.RenterName}",
+                        OccurredAt = bk.CreatedAt,
+                        Action = "BOOKING_CREATE"
+                    });
+                }
 
-            var lastUser = await _db.Users.OrderByDescending(u => u.CreatedAt).FirstOrDefaultAsync();
-            if (lastUser != null)
-            {
-                activities.Add(new AdminActivityDto
+                var recentBoats = await _db.Boats
+                    .OrderByDescending(b => b.CreatedAt)
+                    .Take(5)
+                    .ToListAsync();
+                foreach (var bt in recentBoats)
                 {
-                    Type = "user",
-                    Description = $"User {lastUser.FirstName} {lastUser.LastName} registered",
-                    OccurredAt = lastUser.CreatedAt
-                });
+                    activities.Add(new AdminActivityDto
+                    {
+                        Type = "boat",
+                        Description = $"Bateau \"{bt.Name}\" ajouté",
+                        OccurredAt = bt.CreatedAt,
+                        Action = "BOAT_CREATE"
+                    });
+                }
+
+                var recentUsers = await _db.Users
+                    .OrderByDescending(u => u.CreatedAt)
+                    .Take(5)
+                    .ToListAsync();
+                foreach (var u in recentUsers)
+                {
+                    activities.Add(new AdminActivityDto
+                    {
+                        Type = "user",
+                        Description = $"{u.FirstName} {u.LastName} inscrit(e)",
+                        OccurredAt = u.CreatedAt,
+                        Action = "USER_REGISTER"
+                    });
+                }
+
+                activities = activities.OrderByDescending(a => a.OccurredAt).Take(20).ToList();
             }
 
             return activities;

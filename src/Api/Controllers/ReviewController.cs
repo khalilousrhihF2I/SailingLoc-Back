@@ -16,11 +16,13 @@ namespace Api.Controllers
     {
         private readonly IReviewService _service;
         private readonly ApplicationDbContext _db;
+        private readonly IAuditService _audit;
 
-        public ReviewController(IReviewService service, ApplicationDbContext db)
+        public ReviewController(IReviewService service, ApplicationDbContext db, IAuditService audit)
         {
             _service = service;
             _db = db;
+            _audit = audit;
         }
 
         [HttpGet]
@@ -118,6 +120,10 @@ namespace Api.Controllers
             review.ModeratedAt = DateTime.UtcNow;
 
             await _db.SaveChangesAsync(ct);
+
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            await _audit.LogAsync(Guid.TryParse(adminId, out var aid) ? aid : null, "REVIEW_APPROVE", ip, $"Review {id} approved");
+
             return Ok(review);
         }
 
@@ -136,6 +142,10 @@ namespace Api.Controllers
             review.ModeratedAt = DateTime.UtcNow;
 
             await _db.SaveChangesAsync(ct);
+
+            var ip2 = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            await _audit.LogAsync(Guid.TryParse(adminId, out var aid2) ? aid2 : null, "REVIEW_REJECT", ip2, $"Review {id} rejected: {dto?.Reason}");
+
             return Ok(review);
         }
     }

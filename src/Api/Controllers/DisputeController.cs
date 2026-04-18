@@ -1,4 +1,5 @@
 using Core.Entities;
+using Core.Interfaces;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,10 +13,12 @@ namespace Api.Controllers
     public class DisputeController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
+        private readonly IAuditService _audit;
 
-        public DisputeController(ApplicationDbContext db)
+        public DisputeController(ApplicationDbContext db, IAuditService audit)
         {
             _db = db;
+            _audit = audit;
         }
 
         /// <summary>Create a dispute for a booking</summary>
@@ -42,6 +45,9 @@ namespace Api.Controllers
 
             _db.Disputes.Add(dispute);
             await _db.SaveChangesAsync(ct);
+
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            await _audit.LogAsync(userId, "DISPUTE_CREATE", ip, $"Dispute {dispute.Id} created for booking {dto.BookingId}");
 
             return CreatedAtAction(nameof(GetById), new { id = dispute.Id }, dispute);
         }
@@ -116,6 +122,10 @@ namespace Api.Controllers
             dispute.UpdatedAt = DateTime.UtcNow;
 
             await _db.SaveChangesAsync(ct);
+
+            var ip2 = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            await _audit.LogAsync(adminId, "DISPUTE_RESOLVE", ip2, $"Dispute {id} resolved: {dto.Resolution}");
+
             return Ok(dispute);
         }
 

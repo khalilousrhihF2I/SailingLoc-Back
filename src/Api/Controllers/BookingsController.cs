@@ -21,11 +21,13 @@ namespace Api.Controllers
     {
         private readonly IBookingService _service;
         private readonly ApplicationDbContext _db;
+        private readonly IAuditService _audit;
 
-        public BookingsController(IBookingService service, ApplicationDbContext db)
+        public BookingsController(IBookingService service, ApplicationDbContext db, IAuditService audit)
         {
             _service = service;
             _db = db;
+            _audit = audit;
         }
 
         [HttpGet]
@@ -53,6 +55,11 @@ namespace Api.Controllers
             try
             {
                 var created = await _service.CreateBookingAsync(dto);
+
+                var uid = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+                var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                await _audit.LogAsync(Guid.TryParse(uid, out var g) ? g : null, "BOOKING_CREATE", ip, $"Booking {created.Id} created for boat {dto.BoatId}");
+
                 return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
             }
             catch (KeyNotFoundException knf)
@@ -73,6 +80,11 @@ namespace Api.Controllers
             try
             {
                 var updated = await _service.UpdateBookingAsync(id, dto);
+
+                var uid2 = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+                var ip2 = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                await _audit.LogAsync(Guid.TryParse(uid2, out var g2) ? g2 : null, "BOOKING_UPDATE", ip2, $"Booking {id} updated");
+
                 return Ok(updated);
             }
             catch (KeyNotFoundException)
@@ -87,6 +99,11 @@ namespace Api.Controllers
         {
             var ok = await _service.CancelBookingAsync(id);
             if (!ok) return NotFound();
+
+            var uid3 = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            var ip3 = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            await _audit.LogAsync(Guid.TryParse(uid3, out var g3) ? g3 : null, "BOOKING_CANCEL", ip3, $"Booking {id} cancelled");
+
             return Ok(ok);
         }
 

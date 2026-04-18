@@ -25,6 +25,7 @@ public class AuthController : ControllerBase
     private readonly IConfiguration _cfg;
     private readonly IEmailService _emailService;
     private readonly IPasswordResetService _passwordResetService;
+    private readonly IAuditService _audit;
 
     public AuthController(
         ApplicationDbContext db,
@@ -34,7 +35,8 @@ public class AuthController : ControllerBase
         IFileStorageService files,
         IConfiguration cfg,
         IEmailService emailService,
-        IPasswordResetService passwordResetService)
+        IPasswordResetService passwordResetService,
+        IAuditService audit)
     {
         _db = db;
         _um = um;
@@ -44,6 +46,7 @@ public class AuthController : ControllerBase
         _cfg = cfg;
         _emailService = emailService;
         _passwordResetService = passwordResetService;
+        _audit = audit;
     }
 
     [HttpPost("register"), AllowAnonymous]
@@ -131,6 +134,9 @@ public class AuthController : ControllerBase
             Console.WriteLine($"Erreur lors de l'envoi de la notification de nouvel utilisateur: {ex.Message}");
         }
 
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        await _audit.LogAsync(user.Id, "USER_REGISTER", ip, $"{user.Email} registered as {roleToAssign}");
+
         return Ok(new { message = "Registered" });
     }
 
@@ -152,6 +158,10 @@ public class AuthController : ControllerBase
         await _db.SaveChangesAsync(ct);
 
         user.LastLoginAt = DateTime.UtcNow; await _um.UpdateAsync(user);
+
+        var loginIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        await _audit.LogAsync(user.Id, "USER_LOGIN", loginIp, $"{user.Email} logged in");
+
         return Ok(new { accessToken = access, expiresAt = exp, refreshToken = refresh.Token });
     }
 
@@ -174,6 +184,11 @@ public class AuthController : ControllerBase
     {
         var rt = await _db.RefreshTokens.FirstOrDefaultAsync(r => r.Token == dto.RefreshToken, ct);
         if (rt != null) { rt.Revoked = true; await _db.SaveChangesAsync(ct); }
+
+        var logoutUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        var logoutIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        await _audit.LogAsync(Guid.TryParse(logoutUserId, out var lid) ? lid : null, "USER_LOGOUT", logoutIp);
+
         return Ok(new { message = "Logged out" });
     }
 
@@ -232,14 +247,14 @@ public class AuthController : ControllerBase
         var user = await _um.Users.FirstOrDefaultAsync(u => u.Id == guid, ct);
         if (user == null) return NotFound();
 
-        // Récupérer les rôles de l'utilisateur
+        // Rï¿½cupï¿½rer les rï¿½les de l'utilisateur
         var roles = await _um.GetRolesAsync(user);
 
-        // Récupérer les claims de l'utilisateur
+        // Rï¿½cupï¿½rer les claims de l'utilisateur
         var userClaims = await _um.GetClaimsAsync(user);
         var claims = userClaims.Select(c => new { type = c.Type, value = c.Value }).ToArray();
 
-        // Récupérer les claims de rôles (permissions)
+        // Rï¿½cupï¿½rer les claims de rï¿½les (permissions)
         var permissions = new List<string>();
         foreach (var roleName in roles)
         {

@@ -128,6 +128,8 @@ builder.Services.AddScoped<IRenterDashboardService, RenterDashboardService>();
 builder.Services.AddScoped<IOwnerDashboardService, OwnerDashboardService>();
 // Register home service
 builder.Services.AddScoped<IHomeService, HomeService>();
+// Audit logging
+builder.Services.AddScoped<IAuditService, AuditService>();
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

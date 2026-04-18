@@ -1,12 +1,14 @@
 using Api.DTOs;
 using Core.DTOs;
 using Core.Entities;
+using Core.Interfaces;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace Api.Controllers;
 
@@ -18,12 +20,14 @@ public class AdminUsersController : ControllerBase
     private readonly ApplicationDbContext _db;
     private readonly UserManager<AppUser> _um;
     private readonly RoleManager<AppRole> _rm;
+    private readonly IAuditService _audit;
 
-    public AdminUsersController(ApplicationDbContext db, UserManager<AppUser> um, RoleManager<AppRole> rm)
+    public AdminUsersController(ApplicationDbContext db, UserManager<AppUser> um, RoleManager<AppRole> rm, IAuditService audit)
     {
         _db = db;
         _um = um;
         _rm = rm;
+        _audit = audit;
     }
 
     /// <summary>Get paginated list of users.</summary>
@@ -144,6 +148,10 @@ public class AdminUsersController : ControllerBase
 
         await _um.AddToRoleAsync(user, roleToAssign);
 
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var adminId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+        await _audit.LogAsync(Guid.TryParse(adminId, out var aid) ? aid : null, "ADMIN_USER_CREATE", ip, $"Admin created user {user.Email}");
+
         return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
     }
 
@@ -165,6 +173,11 @@ public class AdminUsersController : ControllerBase
         var u = await _um.Users.FirstOrDefaultAsync(x => x.Id == id);
         if (u is null) return NotFound();
         await _um.DeleteAsync(u);
+
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var adminId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+        await _audit.LogAsync(Guid.TryParse(adminId, out var aid) ? aid : null, "ADMIN_USER_DELETE", ip, $"Admin deleted user {u.Email} ({id})");
+
         return NoContent();
     }
 

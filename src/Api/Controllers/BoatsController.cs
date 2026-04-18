@@ -3,6 +3,7 @@ using Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Api.Controllers
 {
@@ -12,10 +13,12 @@ namespace Api.Controllers
     public class BoatsController : ControllerBase
     {
         private readonly IBoatService _service;
+        private readonly IAuditService _audit;
 
-        public BoatsController(IBoatService service)
+        public BoatsController(IBoatService service, IAuditService audit)
         {
             _service = service;
+            _audit = audit;
         }
 
         [HttpGet]
@@ -50,6 +53,11 @@ namespace Api.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
             var created = await _service.CreateAsync(dto);
+
+            var uid = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            await _audit.LogAsync(Guid.TryParse(uid, out var g) ? g : null, "BOAT_CREATE", ip, $"Boat '{created.Name}' (ID: {created.Id}) created");
+
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
@@ -77,6 +85,11 @@ namespace Api.Controllers
         {
             var ok = await _service.DeleteAsync(id);
             if (!ok) return NotFound();
+
+            var uid2 = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            var ip2 = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            await _audit.LogAsync(Guid.TryParse(uid2, out var g2) ? g2 : null, "BOAT_DELETE", ip2, $"Boat {id} deleted");
+
             return NoContent();
         }
 
@@ -97,6 +110,11 @@ namespace Api.Controllers
         {
             var ok = await _service.SetVerifiedAsync(id, isVerified);
             if (!ok) return NotFound();
+
+            var uid3 = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            var ip3 = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            await _audit.LogAsync(Guid.TryParse(uid3, out var g3) ? g3 : null, "BOAT_VERIFY", ip3, $"Boat {id} verification set to {isVerified}");
+
             return Ok();
         }
 
