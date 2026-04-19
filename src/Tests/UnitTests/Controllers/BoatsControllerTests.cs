@@ -4,6 +4,7 @@ using Core.Interfaces;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using Tests.Helpers;
 using Xunit;
 
 namespace Tests.UnitTests.Controllers;
@@ -14,12 +15,15 @@ namespace Tests.UnitTests.Controllers;
 public class BoatsControllerTests
 {
     private readonly Mock<IBoatService> _serviceMock;
+    private readonly Mock<IAuditService> _auditMock;
     private readonly BoatsController _sut;
 
     public BoatsControllerTests()
     {
         _serviceMock = new Mock<IBoatService>();
-        _sut = new BoatsController(_serviceMock.Object);
+        _auditMock = new Mock<IAuditService>();
+        _sut = new BoatsController(_serviceMock.Object, _auditMock.Object);
+        FakeUserHelper.SetFakeUser(_sut);
     }
 
     // ─── GetAll ───

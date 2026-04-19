@@ -16,14 +16,17 @@ namespace Tests.UnitTests.Controllers;
 public class BookingsControllerTests
 {
     private readonly Mock<IBookingService> _serviceMock;
+    private readonly Mock<IAuditService> _auditMock;
     private readonly BookingsController _sut;
 
     public BookingsControllerTests()
     {
         _serviceMock = new Mock<IBookingService>();
+        _auditMock = new Mock<IAuditService>();
         // Controller needs ApplicationDbContext for invoice, but we only test non-invoice endpoints here
         var db = TestDbContextFactory.Create();
-        _sut = new BookingsController(_serviceMock.Object, db);
+        _sut = new BookingsController(_serviceMock.Object, db, _auditMock.Object);
+        FakeUserHelper.SetFakeUser(_sut);
     }
 
     // ─── GetAll ───

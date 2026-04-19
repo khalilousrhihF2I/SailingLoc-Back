@@ -15,13 +15,16 @@ namespace Tests.UnitTests.Controllers;
 public class ReviewControllerTests
 {
     private readonly Mock<IReviewService> _serviceMock;
+    private readonly Mock<IAuditService> _auditMock;
     private readonly ReviewController _sut;
 
     public ReviewControllerTests()
     {
         _serviceMock = new Mock<IReviewService>();
+        _auditMock = new Mock<IAuditService>();
         var db = TestDbContextFactory.Create();
-        _sut = new ReviewController(_serviceMock.Object, db);
+        _sut = new ReviewController(_serviceMock.Object, db, _auditMock.Object);
+        FakeUserHelper.SetFakeUser(_sut);
     }
 
     [Fact]
