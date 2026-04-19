@@ -68,6 +68,12 @@ public class DataResetController : ControllerBase
         var auditLogs = await _db.AuditLogs.ToListAsync(ct);
         _db.AuditLogs.RemoveRange(auditLogs);
 
+        // 7b. Delete Reviews by non-test users (FK to AspNetUsers prevents deleting users otherwise)
+        var nonTestReviews = await _db.Reviews
+            .Where(r => !testUserIds.Contains(r.UserId))
+            .ToListAsync(ct);
+        _db.Reviews.RemoveRange(nonTestReviews);
+
         // 8. Delete Profiles (not for test users)
         var profiles = await _db.Profiles
             .Where(p => !testUserIds.Contains(p.UserId))

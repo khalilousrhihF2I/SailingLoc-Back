@@ -100,8 +100,26 @@ namespace Api.Controllers
         public async Task<IActionResult> GetPendingReviews(CancellationToken ct)
         {
             var reviews = await _db.Reviews
+                .Include(r => r.Boat)
                 .Where(r => r.ModerationStatus == "pending")
                 .OrderByDescending(r => r.CreatedAt)
+                .Select(r => new
+                {
+                    r.Id,
+                    r.BoatId,
+                    BoatName = r.Boat != null ? r.Boat.Name : null,
+                    r.UserId,
+                    r.UserName,
+                    r.UserAvatar,
+                    r.Rating,
+                    r.Comment,
+                    r.ModerationStatus,
+                    r.ModerationNote,
+                    r.ModeratedBy,
+                    r.ModeratedAt,
+                    r.CreatedAt,
+                    r.UpdatedAt
+                })
                 .ToListAsync(ct);
             return Ok(reviews);
         }
