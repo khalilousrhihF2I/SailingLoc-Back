@@ -76,11 +76,11 @@ public class AuthController : ControllerBase
             UserType = roleToAssign.ToLower(),   // DB uses lowercase
             Address = new Address
             {
-                Street = dto.Address.Street,
-                City = dto.Address.City,
-                State = dto.Address.State,
-                PostalCode = dto.Address.PostalCode,
-                Country = dto.Address.Country
+                Street = dto.Address?.Street ?? "",
+                City = dto.Address?.City ?? "",
+                State = dto.Address?.State ?? "",
+                PostalCode = dto.Address?.PostalCode ?? "",
+                Country = dto.Address?.Country ?? ""
             }
         };
 
@@ -289,7 +289,7 @@ public class AuthController : ControllerBase
         if (id == null) return Unauthorized();
         var user = await _um.Users.FirstAsync(u => u.Id == Guid.Parse(id), ct);
         user.FirstName = dto.FirstName; user.LastName = dto.LastName;
-        user.Address.Street = dto.Address.Street; user.Address.City = dto.Address.City; user.Address.State = dto.Address.State; user.Address.PostalCode = dto.Address.PostalCode; user.Address.Country = dto.Address.Country;
+        user.Address.Street = dto.Address?.Street ?? ""; user.Address.City = dto.Address?.City ?? ""; user.Address.State = dto.Address?.State ?? ""; user.Address.PostalCode = dto.Address?.PostalCode ?? ""; user.Address.Country = dto.Address?.Country ?? "";
         user.UpdatedAt = DateTime.UtcNow;
         await _um.UpdateAsync(user);
         return Ok(new { message = "Updated" });

@@ -91,11 +91,11 @@ public class AdminUsersController : ControllerBase
         if (u is null) return NotFound();
         u.FirstName = dto.FirstName;
         u.LastName = dto.LastName;
-        u.Address.Street = dto.Address.Street;
-        u.Address.City = dto.Address.City;
-        u.Address.State = dto.Address.State;
-        u.Address.PostalCode = dto.Address.PostalCode;
-        u.Address.Country = dto.Address.Country;
+        u.Address.Street = dto.Address?.Street ?? "";
+        u.Address.City = dto.Address?.City ?? "";
+        u.Address.State = dto.Address?.State ?? "";
+        u.Address.PostalCode = dto.Address?.PostalCode ?? "";
+        u.Address.Country = dto.Address?.Country ?? "";
         await _um.UpdateAsync(u);
         return Ok(u);
     }
