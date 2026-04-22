@@ -9,7 +9,11 @@ using System.Security.Claims;
 namespace Api.Controllers
 {
     [ApiController]
-    [Authorize(Roles = "Renter")]
+    // Renter dashboard endpoints are also accessible to Owners and Admins because
+    // an Owner can act as a Renter (book other owners' boats). Every action below
+    // already scopes its queries to the current authenticated user, so opening
+    // these endpoints to Owner/Admin is safe and only exposes their own data.
+    [Authorize(Roles = "Renter,Owner,Admin")]
     [Route("api/v1/renter/dashboard")]
     public class RenterDashboardController : ControllerBase
     {
